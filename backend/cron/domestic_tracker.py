@@ -873,7 +873,7 @@ async def record_failure(source: str, weight: int = 1):
                    VALUES (?, ?, ?, 0, NULL)
                    ON CONFLICT(source) DO UPDATE SET
                    consecutive_failures = consecutive_failures + ?, last_failure_time = ?""",
-                (source, weight, weight, now),
+                (source, weight, now, weight, now),
             )
             conn.commit()
             cur = conn.execute(

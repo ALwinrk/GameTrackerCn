@@ -11,6 +11,8 @@ DB_DIR = Path("./data")
 DB_PATH = DB_DIR / "crawler.db"
 
 _local = threading.local()
+_all_connections: list[sqlite3.Connection] = []
+_conn_lock = threading.Lock()
 
 
 def get_connection() -> sqlite3.Connection:
@@ -22,6 +24,9 @@ def get_connection() -> sqlite3.Connection:
         _local.conn.execute("PRAGMA journal_mode=WAL")
         _local.conn.execute("PRAGMA synchronous=NORMAL")
         _local.conn.execute("PRAGMA foreign_keys=ON")
+        _local.conn.execute("PRAGMA busy_timeout=3000")
+        with _conn_lock:
+            _all_connections.append(_local.conn)
     else:
         try:
             _local.conn.execute("SELECT 1")
@@ -94,7 +99,13 @@ def init_db() -> None:
 
 
 def close_db() -> None:
-    """关闭数据库连接."""
+    """关闭所有数据库连接."""
+    with _conn_lock:
+        for conn in _all_connections:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        _all_connections.clear()
     if hasattr(_local, "conn") and _local.conn:
-        _local.conn.close()
         _local.conn = None

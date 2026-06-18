@@ -1,17 +1,18 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 
 export interface GameItem {
   app_name: string
-  icon_url: string
-  detail_url: string
   package_name: string
-  download_count: string
-  version_name: string
-  updated_at: string
-  activity_desc: string
-  status_badge: string
-  game_status: string
+  icon_url?: string
+  detail_url?: string
+  download_count?: string
+  version_name?: string
+  version_code?: string
+  updated_at?: string
+  activity_desc?: string
+  status_badge?: string
+  game_status?: string
 }
 
 export interface DailyData {
@@ -20,6 +21,30 @@ export interface DailyData {
   poll_interval: number
   last_fetched_at?: string
 }
+
+export interface AppConfig {
+  proxy: string
+  domestic_proxy: string
+  scraper_concurrency: number
+  playwright_concurrency: number
+  retry_times: number
+  retry_delay: number
+  request_timeout: number
+  stealth_timeout: number
+  update_check_interval: number
+  frontend_poll_interval: number
+  enable_3839: boolean
+  enable_taptap: boolean
+  display_limit_3839: number
+  display_limit_taptap: number
+  panel_max_items: number
+  log_level: string
+  log_retention_days: number
+  notice_enabled: boolean
+  notice_text: string
+}
+
+export const API_BASE = 'http://127.0.0.1:8001'
 
 export const useAppStore = defineStore('app', () => {
   // ── 主题 ──
@@ -34,21 +59,25 @@ export const useAppStore = defineStore('app', () => {
   }
 
   // ── API 基础地址 ──
-  const apiBase = ref('http://127.0.0.1:8001')
+  const apiBase = ref(API_BASE)
 
   // ── 配置 ──
-  const config = ref<Record<string, any>>({})
+  const config = ref<Partial<AppConfig>>({})
 
-  async function fetchConfig() {
+  async function fetchConfig(): Promise<Partial<AppConfig>> {
     try {
       const resp = await fetch(`${apiBase.value}/api/config`)
-      if (resp.ok) config.value = await resp.json()
+      if (resp.ok) {
+        config.value = await resp.json()
+        return config.value
+      }
     } catch (e) {
       console.error('Failed to load config', e)
     }
+    return {}
   }
 
-  async function updateConfig(changes: Record<string, any>) {
+  async function updateConfig(changes: Partial<AppConfig>): Promise<Partial<AppConfig>> {
     const resp = await fetch(`${apiBase.value}/api/config`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },

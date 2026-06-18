@@ -63,7 +63,7 @@ async def test_proxy():
 async def daily_updates(
     request: Request,
     source: str = Query(None),
-    limit: int = Query(20),
+    limit: int = Query(20, le=500),
 ):
     """获取国内新游列表, 支持条件请求."""
     from backend.cron.domestic_tracker import get_last_modified

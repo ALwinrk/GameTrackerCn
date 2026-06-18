@@ -23,7 +23,7 @@
 
     <!-- Notice Bar -->
     <div v-if="store.config.notice_enabled && store.config.notice_text" class="notice-bar">
-      <span v-html="store.config.notice_text"></span>
+      <span v-html="sanitizedNotice"></span>
     </div>
 
     <!-- Main Content -->
@@ -48,8 +48,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Moon, Sunny } from '@element-plus/icons-vue'
+import DOMPurify from 'dompurify'
 import { useAppStore } from './stores/app'
 import DailyPanel from './components/DailyPanel.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
@@ -57,6 +58,15 @@ import SettingsPanel from './components/SettingsPanel.vue'
 const store = useAppStore()
 const activeTab = ref('daily')
 const backendReady = ref(false)
+
+// XSS 防护: DOMPurify 白名单 (仅允许安全标签)
+const sanitizedNotice = computed(() => {
+  const raw = store.config.notice_text || ''
+  return DOMPurify.sanitize(raw, {
+    ALLOWED_TAGS: ['br', 'b', 'i', 'a', 'strong', 'em', 'u', 'p', 'span'],
+    ALLOWED_ATTR: ['href', 'target', 'rel'],
+  })
+})
 
 onMounted(async () => {
   // 后台就绪检查 (指数退避)

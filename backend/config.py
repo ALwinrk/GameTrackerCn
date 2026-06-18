@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -105,11 +106,18 @@ class Settings(BaseSettings):
         "panel_max_items",
     }
 
+    # 字符串字段长度限制
+    _STRING_MAXLEN: dict[str, int] = {"proxy": 256, "domestic_proxy": 256, "notice_text": 4096}
+
     def update(self, changes: dict[str, Any]) -> None:
         """运行时更新配置 — 仅白名单键可通过 API 修改, 非白名单键静默跳过."""
         for key, value in changes.items():
             if key not in self._HOT_UPDATE_WHITELIST or not hasattr(self, key):
                 continue
+            # 字符串字段: 长度校验
+            if key in self._STRING_MAXLEN and isinstance(value, str):
+                if len(value) > self._STRING_MAXLEN[key]:
+                    continue
             # 数值型字段: 类型转换 + 范围校验
             if key in self._NUMERIC_KEYS:
                 try:
@@ -124,18 +132,22 @@ class Settings(BaseSettings):
 
 # 全局单例
 _settings: Settings | None = None
+_settings_lock = threading.Lock()
 
 
 def get_settings(config_path: str = "config.json") -> Settings:
     """获取全局配置单例."""
     global _settings
     if _settings is None:
-        _settings = Settings.from_json(config_path)
+        with _settings_lock:
+            if _settings is None:
+                _settings = Settings.from_json(config_path)
     return _settings
 
 
 def reload_settings(config_path: str = "config.json") -> Settings:
     """重新加载配置."""
     global _settings
-    _settings = Settings.from_json(config_path)
+    with _settings_lock:
+        _settings = Settings.from_json(config_path)
     return _settings

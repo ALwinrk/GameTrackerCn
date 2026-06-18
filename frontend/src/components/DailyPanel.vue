@@ -58,42 +58,12 @@
                   </div>
                   <!-- 卡片行 -->
                   <div class="card-row" v-show="!isGroupCollapsed('3839', group.date)">
-                    <div
+                    <GameCard
                       v-for="item in group.items" :key="item.package_name"
-                      class="game-card"
-                      :class="cardStatusClass(item.game_status)"
-                      @click="item.detail_url && openDetail(item.detail_url)"
-                      @contextmenu.prevent="onContextMenu($event, item, '3839')"
-                    >
-                      <!-- 图标: 绝对定位, 不参与 flex 流 -->
-                      <div class="card-icon-wrap">
-                        <img v-if="item.icon_url && !imgFailed[item.package_name]" :src="item.icon_url" class="card-icon" loading="lazy"
-                          referrerpolicy="no-referrer" @error="onImgError(item.package_name)" />
-                        <span v-else class="card-icon-placeholder">🎮</span>
-                      </div>
-                      <!-- Row 1: 名称 (2 行 clamp) -->
-                      <span class="card-name">{{ item.app_name }}</span>
-                      <!-- Row 2: 评分 + 状态徽章 -->
-                      <div v-if="item.version_name || item.status_badge" class="card-badges">
-                        <span v-if="item.version_name" class="card-score">{{ item.version_name }}</span>
-                        <span v-if="item.status_badge" class="card-status-badge" :class="badgeClass(item.status_badge)">{{ item.status_badge }}</span>
-                      </div>
-                      <div v-else class="card-badges card-badges--empty"></div>
-                      <!-- Row 3: 标签徽章 -->
-                      <div v-if="item.download_count" class="card-tags">
-                        <span v-for="tag in splitTags(item.download_count)" :key="tag"
-                          class="tag-badge" :style="{ background: tagBg(tag), color: tagFg(tag) }">{{ tag }}</span>
-                      </div>
-                      <div v-else class="card-tags card-tags--empty"></div>
-                      <!-- Row 4: 活动描述 (flex:1, 完整展示, 不折叠) -->
-                      <div v-if="item.activity_desc" class="card-desc">{{ item.activity_desc }}</div>
-                      <div v-else class="card-desc card-desc--empty"></div>
-                      <!-- Row 5: 游戏类型 -->
-                      <div v-if="item.game_status" class="card-footer">
-                        <span class="card-game-status" :class="statusClass(item.game_status)">{{ item.game_status }}</span>
-                      </div>
-                      <div v-else class="card-footer card-footer--empty"></div>
-                    </div>
+                      :item="item" source="3839"
+                      @contextmenu="onContextMenu"
+                      @open-detail="openDetail"
+                    />
                   </div>
                 </div>
               </div>
@@ -114,42 +84,12 @@
                     <span class="date-count">{{ group.items.length }} 款游戏</span>
                   </div>
                   <div class="card-row" v-show="!isGroupCollapsed('taptap', group.date)">
-                    <div
+                    <GameCard
                       v-for="item in group.items" :key="item.package_name"
-                      class="game-card"
-                      :class="cardStatusClass(item.game_status)"
-                      @click="item.detail_url && openDetail(item.detail_url)"
-                      @contextmenu.prevent="onContextMenu($event, item, 'taptap')"
-                    >
-                      <!-- 图标: 绝对定位, 不参与 flex 流 -->
-                      <div class="card-icon-wrap">
-                        <img v-if="item.icon_url && !imgFailed[item.package_name]" :src="item.icon_url" class="card-icon" loading="lazy"
-                          referrerpolicy="no-referrer" @error="onImgError(item.package_name)" />
-                        <span v-else class="card-icon-placeholder">🎮</span>
-                      </div>
-                      <!-- Row 1: 名称 (2 行 clamp) -->
-                      <span class="card-name">{{ item.app_name }}</span>
-                      <!-- Row 2: 评分 + 状态徽章 -->
-                      <div v-if="item.version_name || item.status_badge" class="card-badges">
-                        <span v-if="item.version_name" class="card-score">{{ item.version_name }}</span>
-                        <span v-if="item.status_badge" class="card-status-badge" :class="badgeClass(item.status_badge)">{{ item.status_badge }}</span>
-                      </div>
-                      <div v-else class="card-badges card-badges--empty"></div>
-                      <!-- Row 3: 标签徽章 (含逗号 → 标签列表) -->
-                      <div v-if="item.download_count && hasTags(item.download_count)" class="card-tags">
-                        <span v-for="tag in splitTags(item.download_count)" :key="tag"
-                          class="tag-badge" :style="{ background: tagBg(tag), color: tagFg(tag) }">{{ tag }}</span>
-                      </div>
-                      <div v-else class="card-tags card-tags--empty"></div>
-                      <!-- Row 4: 活动描述 (纯文本, flex:1, 完整展示) -->
-                      <div v-if="item.activity_desc" class="card-desc">{{ item.activity_desc }}</div>
-                      <div v-else class="card-desc card-desc--empty"></div>
-                      <!-- Row 5: 游戏类型 -->
-                      <div v-if="item.game_status" class="card-footer">
-                        <span class="card-game-status" :class="statusClass(item.game_status)">{{ item.game_status }}</span>
-                      </div>
-                      <div v-else class="card-footer card-footer--empty"></div>
-                    </div>
+                      :item="item" source="taptap"
+                      @contextmenu="onContextMenu"
+                      @open-detail="openDetail"
+                    />
                   </div>
                 </div>
               </div>
@@ -205,6 +145,7 @@ import { Refresh } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useAppStore } from '../stores/app'
 import type { GameItem, DailyData } from '../stores/app'
+import GameCard from './GameCard.vue'
 
 const store = useAppStore()
 
@@ -214,10 +155,13 @@ const allSources = [
   { value: 'taptap', label: 'TapTap 新游日历' },
 ]
 const STORAGE_KEY = 'china_daily_sources'
-const savedSources = localStorage.getItem(STORAGE_KEY)
-const selectedSources = ref<string[]>(
-  savedSources ? JSON.parse(savedSources) : allSources.map(s => s.value)
-)
+let savedSources: string | null = null
+try { savedSources = localStorage.getItem(STORAGE_KEY) } catch { /* ignore */ }
+function parseSavedSources(): string[] {
+  if (!savedSources) return allSources.map(s => s.value)
+  try { return JSON.parse(savedSources) } catch { return allSources.map(s => s.value) }
+}
+const selectedSources = ref<string[]>(parseSavedSources())
 function persistSources() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedSources.value))
 }
@@ -245,9 +189,6 @@ let lastModified: string | null = null
 const crawlStatus = reactive({ running: false, sources: [] as string[] })
 const crawlLog = ref<Array<{ time: string; source: string; event: string; message: string }>>([])
 
-// ── 图片加载失败回退 ──
-const imgFailed = reactive<Record<string, boolean>>({})
-function onImgError(pkg: string) { imgFailed[pkg] = true }
 let statusPollTimer: number | null = null
 
 async function fetchCrawlLog() {
@@ -259,7 +200,9 @@ async function fetchCrawlLog() {
       crawlStatus.running = json.refreshing?.length > 0
       crawlStatus.sources = json.refreshing || []
     }
-  } catch {}
+  } catch (e) {
+    console.error('Crawl log fetch failed', e)
+  }
 }
 
 function startStatusPolling() {
@@ -283,7 +226,7 @@ function onContextMenu(e: MouseEvent, row: GameItem, _source: string) {
   ctxMenu.y = my
   ctxMenu.identifier = row.package_name
   ctxMenu.gameName = row.app_name
-  ctxMenu.detailUrl = row.detail_url
+  ctxMenu.detailUrl = row.detail_url || ''
 }
 function copyIdentifier() {
   navigator.clipboard.writeText(ctxMenu.identifier).then(() => {
@@ -328,7 +271,7 @@ function groupedItems(items: GameItem[]): DateGroup[] {
   // 2. 组内排序：预约 > 试玩 > 下载 > 其它
   const statusOrder: Record<string, number> = { '预约': 0, '试玩': 1, '下载': 2 }
   for (const [, list] of map) {
-    list.sort((a, b) => (statusOrder[a.game_status] ?? 3) - (statusOrder[b.game_status] ?? 3))
+    list.sort((a, b) => (statusOrder[a.game_status || ''] ?? 3) - (statusOrder[b.game_status || ''] ?? 3))
   }
   // 3. 日期升序，今天排最前
   const today = new Date().toISOString().slice(0, 10)
@@ -368,86 +311,39 @@ function formatDateLabel(dateStr: string): string {
   return dateStr
 }
 
-// ── 判断 download_count 是标签列表还是普通文本 ──
-function hasTags(tagStr: string): boolean {
-  // 含逗号(中/英)说明是标签列表; 否则是普通描述文本
-  return /[,，]/.test(tagStr)
-}
-
-// ── 标签拆分 (download_count 存逗号分隔标签) ──
-function splitTags(tagStr: string): string[] {
-  return tagStr.split(/[,，]/).map(t => t.trim()).filter(Boolean)
-}
-
-// ── 标签颜色池 ──
-const TAG_COLORS = [
-  { bg: '#ecf5ff', fg: '#409eff' },  // 蓝
-  { bg: '#fef0f0', fg: '#f56c6c' },  // 红
-  { bg: '#f0f9eb', fg: '#67c23a' },  // 绿
-  { bg: '#fdf6ec', fg: '#e6a23c' },  // 橙
-  { bg: '#f4f0fe', fg: '#9b6ef3' },  // 紫
-  { bg: '#e6faf7', fg: '#1aadbc' },  // 青
-  { bg: '#fef5e7', fg: '#e07b28' },  // 深橙
-  { bg: '#fce4ec', fg: '#e91e63' },  // 粉
-]
-function tagColor(tag: string): typeof TAG_COLORS[0] {
-  let hash = 0
-  for (let i = 0; i < tag.length; i++) hash = ((hash << 5) - hash) + tag.charCodeAt(i) | 0
-  return TAG_COLORS[Math.abs(hash) % TAG_COLORS.length]
-}
-function tagBg(tag: string): string { return tagColor(tag).bg }
-function tagFg(tag: string): string { return tagColor(tag).fg }
-
-// ── 状态徽章样式 ──
-function badgeClass(badge: string): string {
-  const map: Record<string, string> = {
-    '测试': 'badge-test',
-    '招募中': 'badge-recruit',
-    '内测': 'badge-test',
-    '公测': 'badge-launch',
-  }
-  return map[badge] || 'badge-default'
-}
-
-// ── 卡片状态 class ──
-function cardStatusClass(status: string): string {
-  const map: Record<string, string> = {
-    '预约': 'card-reserve',
-    '试玩': 'card-trial',
-    '下载': 'card-release',
-  }
-  return map[status] || 'card-release'
-}
-
-// ── 游戏状态样式 ──
-function statusClass(status: string): string {
-  const map: Record<string, string> = {
-    '预约': 'status-reserve',
-    '下载': 'status-download',
-    '试玩': 'status-trial',
-  }
-  return map[status] || 'status-default'
-}
-
-// ── 数据获取 ──
+// ── 数据获取 (AbortController 防竞态) ──
+let fetchAbortController: AbortController | null = null
 async function fetchUpdates(force: boolean = false): Promise<void> {
+  // 取消上一个未完成的请求, 防止旧数据覆盖新数据
+  if (fetchAbortController) {
+    fetchAbortController.abort()
+  }
+  fetchAbortController = new AbortController()
+  const signal = fetchAbortController.signal
+
   loading.value = true
   try {
     const headers: Record<string, string> = {}
     if (!force && lastModified) headers['If-Modified-Since'] = lastModified
-    const resp = await fetch(`${store.apiBase}/api/daily-updates?limit=60`, { headers })
+    const resp = await fetch(`${store.apiBase}/api/daily-updates?limit=60`, { headers, signal })
+    if (signal.aborted) return
     if (resp.status === 304) return
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
     const json = await resp.json()
+    if (signal.aborted) return
     data.value = json
     lastFetchedAt.value = json.last_fetched_at || ''
     const lm = resp.headers.get('Last-Modified')
     if (lm) lastModified = lm
     if (json.poll_interval) resetPollTimer(json.poll_interval * 1000)
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.name === 'AbortError') return  // 被取消, 正常
     console.error('Daily updates fetch failed', e)
     ElMessage.error('面板数据加载失败')
   } finally {
+    if (fetchAbortController?.signal === signal) {
+      fetchAbortController = null
+    }
     loading.value = false
   }
 }
@@ -462,6 +358,7 @@ const loadingIncr = ref(false)
 const loadingFull = ref(false)
 const loadingPanel = ref(false)
 const refreshPolling = ref(false)
+const refreshPollTimer = ref<ReturnType<typeof setInterval> | null>(null)
 
 async function refreshPanel(): Promise<void> {
   if (!selectedSources.value.length) { ElMessage.warning('请先选择数据源'); return }
@@ -478,20 +375,22 @@ function startRefreshPolling(label: string): void {
   refreshPolling.value = true
   let attempts = 0
   const maxAttempts = 24
-  const timer = setInterval(async () => {
+  refreshPollTimer.value = setInterval(async () => {
     attempts++
     await fetchUpdates(true)
     try {
       const sr = await fetch(`${store.apiBase}/api/daily-updates/refresh-status`)
       const sj = await sr.json()
       if (!sj.running || attempts >= maxAttempts) {
-        clearInterval(timer)
+        clearInterval(refreshPollTimer.value!)
+        refreshPollTimer.value = null
         refreshPolling.value = false
         if (attempts >= maxAttempts) ElMessage.warning(`${label}：等待超时，请稍后手动刷新面板`)
         else ElMessage.success(`${label}完成`)
       }
     } catch {
-      clearInterval(timer)
+      clearInterval(refreshPollTimer.value!)
+      refreshPollTimer.value = null
       refreshPolling.value = false
     }
   }, 5000)
@@ -554,6 +453,7 @@ onMounted(async () => {
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
   if (statusPollTimer) clearInterval(statusPollTimer)
+  if (refreshPollTimer.value) clearInterval(refreshPollTimer.value)
   document.removeEventListener('click', hideMenu)
 })
 </script>

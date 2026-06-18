@@ -4,11 +4,28 @@
 
 ## v1.1 更新
 
-- **卡片全字段对齐**: CSS Grid 固定行高，名称 2 行 clamp、标签 2 行占位、详情完整展开、游戏类型底部对齐
-- **TapTap 游戏类型标签**: 从 API `app_card_info.tags` 提取类型标签（角色扮演、策略、卡牌等），与事件元数据并列展示
-- **历史日期可折叠**: N-1 天前数据默认折叠，点击日期头展开/收起，今天及未来默认展开
-- **启动优化**: 端口冲突检测、浏览器端口轮询、退出信号处理、`python -m backend.main` 工作目录修正
-- **版本号统一**: launcher + FastAPI + 数据库索引统一为 v1.1
+### 功能
+- **卡片全字段对齐**: 每条字段独立行，名称 2 行 clamp、标签 2 行占位、详情 flex 完整展开、游戏类型底部对齐
+- **TapTap 类型标签**: 从 API `app_card_info.tags` 提取类型标签（角色扮演、策略、卡牌等），与事件元数据并列展示
+- **历史日期可折叠**: N-1 天前默认折叠，今天及未来默认展开，点击日期头切换
+- **GameCard 组件化**: 提取公共卡片组件，3839/TapTap 统一模板，新源接入更便捷
+
+### 健壮性
+- **熔断器修复**: `record_failure` SQL 参数补全，连续失败自动降频/熔断
+- **线程安全**: config 单例加锁、WebSocket 广播快照、DB 全连接关闭
+- **SQLite WAL 优化**: `busy_timeout=3000` 防止并发写入锁冲突
+- **内存泄漏修复**: 刷新轮询 timer 组件销毁时清除、文件句柄/DB 连接全量释放
+- **竞态修复**: `fetchUpdates` 加 AbortController 取消旧请求
+
+### 安全性
+- **XSS 防护**: 公告栏用 DOMPurify 白名单过滤，仅允许安全标签
+- **SSRF 防护**: `validate_url` DNS 解析 + 私有 IP 拦截已激活
+- **输入校验**: API limit 上限 500、配置字段长度限制、localStorage 解析异常兜底
+- **TypeScript**: `AppConfig` 接口替代 `Record<string,any>`，`GameItem` 可选字段完善
+
+### 启动
+- 端口冲突检测 + 自动终止旧进程、浏览器端口轮询、退出信号处理
+- `python -m backend.main` 工作目录修正、版本号统一 v1.1
 
 ## 快速开始
 
@@ -77,9 +94,9 @@ npm run build      # 生产构建
 
 ## 技术栈
 
-- **后端**: FastAPI + SQLite + aiohttp + BeautifulSoup
-- **前端**: Vue 3 + TypeScript + Element Plus + Pinia + Vite
-- **打包**: PyInstaller (--console, 单文件 EXE)
+- **后端**: FastAPI + SQLite + aiohttp + BeautifulSoup + patchright
+- **前端**: Vue 3 + TypeScript + Element Plus + Pinia + Vite + DOMPurify
+- **打包**: PyInstaller (--console, 单文件 EXE, ~80MB)
 
 ## 目录结构
 

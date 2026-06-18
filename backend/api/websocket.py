@@ -41,7 +41,7 @@ class WebSocketManager:
     async def broadcast(self, message: dict[str, Any]):
         """向所有连接广播消息."""
         dead = []
-        for cid, ws in self._connections.items():
+        for cid, ws in list(self._connections.items()):
             try:
                 await ws.send_text(json.dumps(message, ensure_ascii=False))
             except Exception:
@@ -51,7 +51,7 @@ class WebSocketManager:
 
     async def send_to_task(self, task_id: str, message: dict[str, Any]):
         """向订阅特定 task_id 的连接发送消息."""
-        subs = self._task_subscribers.get(task_id, [])
+        subs = list(self._task_subscribers.get(task_id, []))
         dead = []
         for cid in subs:
             ws = self._connections.get(cid)

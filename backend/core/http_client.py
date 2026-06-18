@@ -39,6 +39,9 @@ async def http_get(url: str, timeout: float | None = None) -> tuple[int, str]:
     settings = get_settings()
     effective_timeout = timeout or settings.request_timeout
 
+    # SSRF 防护: 验证 URL
+    url = validate_url(url)
+
     # ── 方案 1: aiohttp (优先, 稳定, 无依赖问题) ──
     status, html = await _aiohttp_get(url, effective_timeout)
     if status == 200 and len(html) > 200:
@@ -68,8 +71,8 @@ async def http_get(url: str, timeout: float | None = None) -> tuple[int, str]:
                 body = body.decode("utf-8", errors="replace")
             if status_code == 200 and len(body) > 200:
                 return 200, str(body)
-    except Exception:
-        pass  # Scrapling 不可用, 返回 aiohttp 的结果 (即使也失败了)
+    except Exception as e:
+        logger.debug("Scrapling fallback failed for {}: {}", url[:60], e)
 
     return status, html  # 返回 aiohttp 的结果
 
@@ -103,6 +106,9 @@ async def stealth_get(url: str, timeout: float | None = None) -> tuple[int, str]
     """
     settings = get_settings()
     effective_timeout = timeout or settings.stealth_timeout
+
+    # SSRF 防护: 验证 URL
+    url = validate_url(url)
 
     try:
         from backend.core.browser_manager import get_browser_manager
@@ -138,11 +144,11 @@ def is_cloudflare_block(html: str) -> bool:
 
 
 def validate_url(url: str, allow_all_https: bool = True) -> str:
-    """验证 URL 安全性 (SSRF 防护).
+    """验证 URL 安全性 (SSRF 防护, DNS 解析 + 私有 IP 拦截).
 
     Args:
         url: 待验证 URL
-        allow_all_https: 是否允许所有 HTTPS URL
+        allow_all_https: 始终为 True (国内系统无域名白名单, 仅拦截私有 IP)
 
     Returns:
         规范化后的 URL
@@ -150,6 +156,8 @@ def validate_url(url: str, allow_all_https: bool = True) -> str:
     Raises:
         ValueError: URL 无效或不安全
     """
+    import socket as _socket
+
     if not url or not isinstance(url, str):
         raise ValueError("URL 为空")
     url = url.strip()
@@ -159,16 +167,39 @@ def validate_url(url: str, allow_all_https: bool = True) -> str:
     hostname = (parsed.hostname or "").lower()
     if not hostname:
         raise ValueError("无法提取主机名")
-    # 禁止内网地址
+
+    # 1. 字符串级私有/回环 IP 快速拦截
     if hostname in ("localhost", "127.0.0.1", "0.0.0.0", "::1"):
         raise ValueError("禁止访问内网地址")
-    if hostname.startswith("10.") or hostname.startswith("192.168.") or hostname.startswith("172."):
-        # 粗略过滤私有 IP 段
-        parts = hostname.split(".")
-        if parts[0] == "10":
-            raise ValueError("禁止访问内网地址")
-        if parts[0] == "172" and 16 <= int(parts[1]) <= 31:
-            raise ValueError("禁止访问内网地址")
-        if parts[0] == "192" and parts[1] == "168":
-            raise ValueError("禁止访问内网地址")
+
+    _private_prefixes = [
+        (10, 0, 0), (127, 0, 0), (169, 254, 0),
+        (172, 16, 31), (192, 168, 0),
+    ]
+    parts = hostname.split(".")
+    if len(parts) == 4 and all(p.isdigit() for p in parts):
+        a, b = int(parts[0]), int(parts[1])
+        for pre_a, lo_b, hi_b in _private_prefixes:
+            if a == pre_a:
+                if hi_b == 0 or (lo_b <= b <= hi_b):
+                    raise ValueError("禁止访问内网地址")
+
+    # 2. DNS 解析后私有 IP 拦截 (防 DNS rebinding)
+    try:
+        resolved = _socket.getaddrinfo(hostname, None, _socket.AF_INET)
+        seen = set()
+        for _family, _type, _proto, _cname, sockaddr in resolved:
+            ip = sockaddr[0]
+            if ip in seen:
+                continue
+            seen.add(ip)
+            parts_ip = ip.split(".")
+            if len(parts_ip) == 4 and all(p.isdigit() for p in parts_ip):
+                a, b = int(parts_ip[0]), int(parts_ip[1])
+                for pre_a, lo_b, hi_b in _private_prefixes:
+                    if a == pre_a and (hi_b == 0 or lo_b <= b <= hi_b):
+                        raise ValueError(f"域名 {hostname} 解析到内网 IP: {ip}")
+    except _socket.gaierror:
+        raise ValueError(f"域名解析失败: {hostname}")
+
     return url

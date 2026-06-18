@@ -19,7 +19,7 @@
         <el-divider content-position="left">🔄 更新频率</el-divider>
         <el-form-item label="定时抓取间隔(秒)">
           <el-input-number v-model="form.update_check_interval" :min="600" :max="86400" :step="300" @change="save" />
-          <span class="hint">{{ formatInterval(form.update_check_interval) }}</span>
+          <span class="hint">{{ formatInterval(form.update_check_interval || 3600) }}</span>
         </el-form-item>
         <el-form-item label="前端轮询间隔(秒)">
           <el-input-number v-model="form.frontend_poll_interval" :min="30" :max="3600" :step="30" @change="save" />
@@ -77,13 +77,15 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, onMounted } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { useAppStore } from '../stores/app'
+import { useAppStore, type AppConfig } from '../stores/app'
 
 const store = useAppStore()
 
-const form = reactive<Record<string, any>>({
+const saving = ref(false)
+
+const form = reactive<Partial<AppConfig>>({
   enable_3839: true, enable_taptap: true,
   update_check_interval: 3600, frontend_poll_interval: 300,
   display_limit_3839: 60, display_limit_taptap: 60,
@@ -108,11 +110,13 @@ async function loadForm() {
 }
 
 async function save() {
+  if (saving.value) return
+  saving.value = true
   try {
-    const changes: Record<string, any> = {}
-    for (const key of Object.keys(form)) {
+    const changes: Partial<AppConfig> = {}
+    for (const key of Object.keys(form) as (keyof AppConfig)[]) {
       if (form[key] !== store.config[key]) {
-        changes[key] = form[key]
+        (changes as Record<string, any>)[key] = form[key]
       }
     }
     if (Object.keys(changes).length === 0) return
@@ -121,6 +125,8 @@ async function save() {
     await store.fetchConfig()
   } catch (e: any) {
     ElMessage.error(`保存失败: ${e.message || e}`)
+  } finally {
+    saving.value = false
   }
 }
 
@@ -133,7 +139,8 @@ async function testProxy() {
     } else {
       ElMessage.warning(`代理测试失败: ${result.error}`)
     }
-  } catch {
+  } catch (e) {
+    console.error('Proxy test failed', e)
     ElMessage.error('代理测试请求失败')
   }
 }

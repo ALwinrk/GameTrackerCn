@@ -141,7 +141,7 @@ async def lifespan(app: FastAPI):
     update_task.cancel()
     if browser_task:
         browser_task.cancel()
-    await asyncio.gather(update_task, browser_task, return_exceptions=True)
+    await asyncio.gather(*[t for t in (update_task, browser_task) if t is not None], return_exceptions=True)
 
     # 关闭浏览器
     try:
