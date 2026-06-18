@@ -1,0 +1,21 @@
+{
+  "proxy": "",
+  "domestic_proxy": "",
+  "scraper_concurrency": 2,
+  "playwright_concurrency": 2,
+  "retry_times": 2,
+  "retry_delay": 1.0,
+  "request_timeout": 10.0,
+  "stealth_timeout": 30.0,
+  "update_check_interval": 3600,
+  "frontend_poll_interval": 300,
+  "enable_3839": true,
+  "enable_taptap": true,
+  "display_limit_3839": 200,
+  "display_limit_taptap": 200,
+  "panel_max_items": 500,
+  "log_level": "INFO",
+  "log_retention_days": 30,
+  "notice_enabled": true,
+  "notice_text": "首次启动点击全量刷新，而后每小时自动刷新数据，也可以自行点击增量刷新</br>\n优先展示内容排序：预约类游戏>试玩测试类游戏>可下载类正式服游戏</br>\n系统只保留N-1天前的游戏（N=当天）</br>\n点击游戏卡片即可跳转对应详情页"
+}
